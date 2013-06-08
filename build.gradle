@@ -1,0 +1,43 @@
+apply plugin: 'java'
+apply plugin: 'maven-publish'
+apply plugin: 'checkstyle'
+
+group = 'com.bealetech'
+version = '2.3.1-SNAPSHOT'
+
+description = 'Metrics Statsd Support'
+
+sourceCompatibility = 1.6
+targetCompatibility = 1.6
+
+repositories {
+  mavenCentral()
+}
+
+task sourceJar(type: Jar) {
+    from sourceSets.main.allJava
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+
+            artifact sourceJar {
+                classifier "sources"
+            }
+        }
+    }
+}
+
+dependencies {
+    compile group: 'com.yammer.metrics', name: 'metrics-core', version:'2.1.3'
+    compile group: 'org.slf4j', name: 'slf4j-jdk14', version:'1.7.5'
+    testCompile group: 'junit', name: 'junit-dep', version:'4.11'
+    testCompile group: 'org.mockito', name: 'mockito-all', version:'1.9.5'
+}
+
+checkstyle {
+  sourceSets = [sourceSets.main]
+  configFile = file("$rootDir/config/checkstyle/checkstyle.xml")
+}

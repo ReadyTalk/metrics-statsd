@@ -1,4 +1,9 @@
 language: java
+before_install:
+    - echo | sudo add-apt-repository ppa:cwchien/gradle
+    - sudo apt-get update -qq
+    - sudo apt-get install -qq gradle=1.6-0ubuntu1
+    - export PATH=/usr/bin:$PATH
 jdk:
     - openjdk6
     - openjdk7
