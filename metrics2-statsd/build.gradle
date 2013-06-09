@@ -1,0 +1,7 @@
+version = '2.4.0-SNAPSHOT'
+
+dependencies {
+  provided (
+    ['com.yammer.metrics:metrics-core:2.1.3'],
+  )
+}
