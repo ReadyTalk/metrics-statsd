@@ -1,0 +1,5 @@
+version = '3.0.0-SNAPSHOT'
+
+dependencies {
+  provided 'com.codahale.metrics:metrics-core:3.0.0'
+}

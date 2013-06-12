@@ -61,6 +61,7 @@ subprojects {
       ['junit:junit:4.11'],
       ['org.mockito:mockito-all:1.9.5'],
       ['org.slf4j:slf4j-jdk14:1.7.5'],
+      ['org.easytesting:fest-assert-core:2.0M10'],
     )
   }
 
