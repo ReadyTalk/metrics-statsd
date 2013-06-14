@@ -1,4 +1,4 @@
-package com.bealetech.metrics.reporting;
+package com.readytalk.metrics;
 
 import com.codahale.metrics.*;
 import org.slf4j.Logger;

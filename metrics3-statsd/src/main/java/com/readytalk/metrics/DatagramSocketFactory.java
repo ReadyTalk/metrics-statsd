@@ -1,4 +1,4 @@
-package com.bealetech.metrics.reporting;
+package com.readytalk.metrics;
 
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;

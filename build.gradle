@@ -20,7 +20,7 @@ subprojects {
   apply plugin: 'propdeps-idea'
   apply plugin: 'propdeps-eclipse'
 
-  group = 'com.bealetech'
+  group = 'com.readytalk'
 
   description = 'Metrics StatsD Support'
 
@@ -48,21 +48,21 @@ subprojects {
   }
 
   dependencies {
-    compile (
-      ['org.slf4j:slf4j-api:1.7.5'],
-    )
+    compile ([
+      'org.slf4j:slf4j-api:1.7.5',
+    ])
   
-    optional (
-      ['com.google.code.findbugs:jsr305:2.0.1'],
-      ['com.google.code.findbugs:annotations:2.0.1'],
-    )
+    optional ([
+      'com.google.code.findbugs:jsr305:2.0.1',
+      'com.google.code.findbugs:annotations:2.0.1',
+    ])
   
-    testCompile (
-      ['junit:junit:4.11'],
-      ['org.mockito:mockito-all:1.9.5'],
-      ['org.slf4j:slf4j-jdk14:1.7.5'],
-      ['org.easytesting:fest-assert-core:2.0M10'],
-    )
+    testCompile ([
+      'junit:junit:4.11',
+      'org.mockito:mockito-all:1.9.5',
+      'org.slf4j:slf4j-jdk14:1.7.5',
+      'org.easytesting:fest-assert-core:2.0M10',
+    ])
   }
 
   tasks.withType(Compile) { 

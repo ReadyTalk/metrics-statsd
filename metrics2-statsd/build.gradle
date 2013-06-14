@@ -1,3 +1,4 @@
+group = 'com.bealetech'
 version = '2.4.0-SNAPSHOT'
 
 dependencies {

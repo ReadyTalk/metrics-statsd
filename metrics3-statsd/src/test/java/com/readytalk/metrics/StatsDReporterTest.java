@@ -1,4 +1,4 @@
-package com.bealetech.metrics.reporting;
+package com.readytalk.metrics;
 
 import com.codahale.metrics.Counter;
 import com.codahale.metrics.Gauge;
@@ -21,7 +21,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
-public class StatsDReporterTest {
+public class  StatsDReporterTest {
   private final StatsD statsD = mock(StatsD.class);
   private final MetricRegistry registry = mock(MetricRegistry.class);
   private final StatsDReporter reporter = StatsDReporter.forRegistry(registry)

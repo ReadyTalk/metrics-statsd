@@ -1,4 +1,4 @@
-package com.bealetech.metrics.reporting;
+package com.readytalk.metrics;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -67,7 +67,7 @@ public class StatsDTest {
   }
 
   @Test
-  public void writesValuesToGraphite() throws Exception {
+  public void writesValuesToStatsD() throws Exception {
     statsD.connect();
     statsD.send("name", "value");
 
