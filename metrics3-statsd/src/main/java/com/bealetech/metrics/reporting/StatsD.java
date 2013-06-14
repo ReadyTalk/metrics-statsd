@@ -1,5 +1,8 @@
 package com.bealetech.metrics.reporting;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.DatagramSocket;
@@ -11,6 +14,9 @@ import java.util.regex.Pattern;
  * A client to a StatsD server.
  */
 public class StatsD implements Closeable {
+
+  private static final Logger LOG = LoggerFactory.getLogger(StatsD.class);
+
   private static final Pattern WHITESPACE = Pattern.compile("[\\s]+");
 
   private static final Charset UTF_8 = Charset.forName("UTF-8");
@@ -71,6 +77,13 @@ public class StatsD implements Closeable {
       failures = 0;
     } catch (IOException e) {
       failures++;
+
+      if (failures == 1) {
+        LOG.warn("unable to send packet to statsd at '{}:{}'", address.getHostName(), address.getPort());
+      } else {
+        LOG.debug("unable to send packet to statsd at '{}:{}'", address.getHostName(), address.getPort());
+      }
+
       throw e;
     }
   }
