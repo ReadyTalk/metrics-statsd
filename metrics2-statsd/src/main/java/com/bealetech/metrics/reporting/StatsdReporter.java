@@ -29,6 +29,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
+import java.nio.charset.Charset;
 import java.util.Locale;
 import java.util.Map;
 import java.util.SortedMap;
@@ -36,6 +37,7 @@ import java.util.concurrent.TimeUnit;
 
 public class StatsdReporter extends AbstractPollingReporter implements MetricProcessor<Long> {
     private static final Logger LOG = LoggerFactory.getLogger(StatsdReporter.class);
+    private static final Charset UTF_8 = Charset.forName("UTF-8");
 
     protected final String prefix;
     protected final MetricPredicate predicate;
@@ -114,7 +116,7 @@ public class StatsdReporter extends AbstractPollingReporter implements MetricPro
         try {
             socket = this.socketProvider.get();
             outputData.reset();
-            writer = new BufferedWriter(new OutputStreamWriter(this.outputData));
+            writer = new BufferedWriter(new OutputStreamWriter(this.outputData, UTF_8));
             serializer = new StatsdSerializer(prefix, writer);
 
             final long epoch = clock.time() / 1000;
