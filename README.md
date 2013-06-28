@@ -7,8 +7,8 @@ StatsD reporter for codahale/metrics. Supports versions 2 and 3.
 ```java
 MetricRegistry registry = new MetricRegistry();
 StatsDReporter.forRegistry(registry)
-    .build(new StatsD(new InetSocketAddress("statsd.example.com", 8125)))
-    .start(1, TimeUnit.MINUTES);
+    .build("statsd.example.com", 8125)
+    .start(10, TimeUnit.SECONDS);
 ```
 
 ## Gradle

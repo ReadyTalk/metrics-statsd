@@ -23,20 +23,20 @@ public class StatsD implements Closeable {
 
 	private static final Charset UTF_8 = Charset.forName("UTF-8");
 
-	private final InetSocketAddress address;
 	private final DatagramSocketFactory socketFactory;
 
+	private InetSocketAddress address;
 	private DatagramSocket socket;
 	private int failures;
 
 	/**
-	 * Creates a new client which connects to the given address using the default
-	 * {@link DatagramSocketFactory}.
+	 * Creates a new client which connects to the given address using the default {@link DatagramSocketFactory}.
 	 *
-	 * @param address the address of the StatsD server
+	 * @param host the hostname of the StatsD server.
+	 * @param port the port of the StatsD server. This is typically 8125.
 	 */
-	public StatsD(final InetSocketAddress address) {
-		this(address, new DatagramSocketFactory());
+	StatsD(final String host, final int port) {
+		this(new InetSocketAddress(host, port), new DatagramSocketFactory());
 	}
 
 	/**
@@ -45,13 +45,15 @@ public class StatsD implements Closeable {
 	 * @param address the address of the Carbon server
 	 * @param socketFactory the socket factory
 	 */
-	public StatsD(final InetSocketAddress address, final DatagramSocketFactory socketFactory) {
+	StatsD(final InetSocketAddress address, final DatagramSocketFactory socketFactory) {
 		this.address = address;
 		this.socketFactory = socketFactory;
 	}
 
 	/**
-	 * Connects to the server.
+	 * Resolves the address hostname if present.
+	 *
+	 * Creates a datagram socket through the factory.
 	 *
 	 * @throws IllegalStateException if the client is already connected
 	 * @throws IOException           if there is an error connecting
@@ -59,6 +61,10 @@ public class StatsD implements Closeable {
 	public void connect() throws IOException {
 		if (socket != null) {
 			throw new IllegalStateException("Already connected");
+		}
+
+		if (address.getHostName() != null) {
+			this.address = new InetSocketAddress(address.getHostName(), address.getPort());
 		}
 
 		this.socket = socketFactory.createSocket();

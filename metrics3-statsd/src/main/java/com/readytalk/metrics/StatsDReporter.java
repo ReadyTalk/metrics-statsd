@@ -127,6 +127,18 @@ public class StatsDReporter extends ScheduledReporter {
 		}
 
 		/**
+		 * Builds a {@link StatsDReporter} with the given properties, sending metrics to StatsD at the given host and port.
+		 *
+		 * @param host the hostname of the StatsD server.
+		 * @param port the port of the StatsD server. This is typically 8125.
+		 *
+		 * @return a {@link StatsDReporter}
+		 */
+		public StatsDReporter build(final String host, final int port) {
+			return build(new StatsD(host, port));
+		}
+
+		/**
 		 * Builds a {@link StatsDReporter} with the given properties, sending metrics using the
 		 * given {@link StatsD} client.
 		 *
