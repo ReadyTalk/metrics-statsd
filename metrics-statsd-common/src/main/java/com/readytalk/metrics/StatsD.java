@@ -67,7 +67,6 @@ public class StatsD implements Closeable {
 
   /**
    * Resolves the address hostname if present.
-   * <p/>
    * Creates a datagram socket through the factory.
    *
    * @throws IllegalStateException if the client is already connected
