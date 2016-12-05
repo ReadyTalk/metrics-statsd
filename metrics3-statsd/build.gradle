@@ -1,7 +1,7 @@
 dependencies {
   compile project(':metrics-statsd-common')
   provided (
-    'com.codahale.metrics:metrics-core:3.0.0'
+    'io.dropwizard.metrics:metrics-core:3.1.0'
   )
 }
 
