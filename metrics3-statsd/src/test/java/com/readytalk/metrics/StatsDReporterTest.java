@@ -41,6 +41,7 @@ public class StatsDReporterTest {
   private final MetricRegistry registry = mock(MetricRegistry.class);
   private final StatsDReporter reporter = StatsDReporter.forRegistry(registry)
       .prefixedWith("prefix")
+      .suffixedWith("suffix")
       .convertRatesTo(TimeUnit.SECONDS)
       .convertDurationsTo(TimeUnit.MILLISECONDS)
       .filter(MetricFilter.ALL)
@@ -51,78 +52,78 @@ public class StatsDReporterTest {
 
   @Test
   public void doesNotReportStringGaugeValues() throws Exception {
-    reporter.report(map("gauge", gauge("value")), this.<Counter>map(), this.<Histogram>map(), this.<Meter>map(),
-        this.<Timer>map());
+    reporter.report(map("%s.gauge", gauge("value")), this.<Counter>map(), this.<Histogram>map(), this.<Meter>map(),
+            this.<Timer>map());
 
     final InOrder inOrder = inOrder(statsD);
     inOrder.verify(statsD).connect();
-    inOrder.verify(statsD, never()).send("prefix.gauge", "value");
+    inOrder.verify(statsD, never()).send("prefix.suffix.gauge", "value");
     inOrder.verify(statsD).close();
   }
 
   @Test
   public void reportsByteGaugeValues() throws Exception {
-    reporter.report(map("gauge", gauge((byte) 1)), this.<Counter>map(), this.<Histogram>map(), this.<Meter>map(),
+    reporter.report(map("%s.gauge", gauge((byte) 1)), this.<Counter>map(), this.<Histogram>map(), this.<Meter>map(),
         this.<Timer>map());
 
     final InOrder inOrder = inOrder(statsD);
     inOrder.verify(statsD).connect();
-    inOrder.verify(statsD).send("prefix.gauge", "1");
+    inOrder.verify(statsD).send("prefix.suffix.gauge", "1");
     inOrder.verify(statsD).close();
   }
 
   @Test
   public void reportsShortGaugeValues() throws Exception {
-    reporter.report(map("gauge", gauge((short) 1)), this.<Counter>map(), this.<Histogram>map(), this.<Meter>map(),
+    reporter.report(map("%s.gauge", gauge((short) 1)), this.<Counter>map(), this.<Histogram>map(), this.<Meter>map(),
         this.<Timer>map());
 
     final InOrder inOrder = inOrder(statsD);
     inOrder.verify(statsD).connect();
-    inOrder.verify(statsD).send("prefix.gauge", "1");
+    inOrder.verify(statsD).send("prefix.suffix.gauge", "1");
     inOrder.verify(statsD).close();
   }
 
   @Test
   public void reportsIntegerGaugeValues() throws Exception {
-    reporter.report(map("gauge", gauge(1)), this.<Counter>map(), this.<Histogram>map(), this.<Meter>map(),
+    reporter.report(map("%s.gauge", gauge(1)), this.<Counter>map(), this.<Histogram>map(), this.<Meter>map(),
         this.<Timer>map());
 
     final InOrder inOrder = inOrder(statsD);
     inOrder.verify(statsD).connect();
-    inOrder.verify(statsD).send("prefix.gauge", "1");
+    inOrder.verify(statsD).send("prefix.suffix.gauge", "1");
     inOrder.verify(statsD).close();
   }
 
   @Test
   public void reportsLongGaugeValues() throws Exception {
-    reporter.report(map("gauge", gauge(1L)), this.<Counter>map(), this.<Histogram>map(), this.<Meter>map(),
+    reporter.report(map("%s.gauge", gauge(1L)), this.<Counter>map(), this.<Histogram>map(), this.<Meter>map(),
         this.<Timer>map());
 
     final InOrder inOrder = inOrder(statsD);
     inOrder.verify(statsD).connect();
-    inOrder.verify(statsD).send("prefix.gauge", "1");
+    inOrder.verify(statsD).send("prefix.suffix.gauge", "1");
     inOrder.verify(statsD).close();
   }
 
   @Test
   public void reportsFloatGaugeValues() throws Exception {
-    reporter.report(map("gauge", gauge(1.1f)), this.<Counter>map(), this.<Histogram>map(), this.<Meter>map(),
+    reporter.report(map("%s.gauge", gauge(1.1f)), this.<Counter>map(), this.<Histogram>map(), this.<Meter>map(),
         this.<Timer>map());
 
     final InOrder inOrder = inOrder(statsD);
     inOrder.verify(statsD).connect();
-    inOrder.verify(statsD).send("prefix.gauge", "1.10");
+    inOrder.verify(statsD).send("prefix.suffix.gauge", "1.10");
     inOrder.verify(statsD).close();
   }
 
   @Test
   public void reportsDoubleGaugeValues() throws Exception {
-    reporter.report(map("gauge", gauge(1.1)), this.<Counter>map(), this.<Histogram>map(), this.<Meter>map(),
+    reporter.report(map("%s.gauge", gauge(1.1)), this.<Counter>map(), this.<Histogram>map(), this.<Meter>map(),
         this.<Timer>map());
 
     final InOrder inOrder = inOrder(statsD);
     inOrder.verify(statsD).connect();
-    inOrder.verify(statsD).send("prefix.gauge", "1.10");
+    inOrder.verify(statsD).send("prefix.suffix.gauge", "1.10");
     inOrder.verify(statsD).close();
   }
 
@@ -131,12 +132,12 @@ public class StatsDReporterTest {
     final Counter counter = mock(Counter.class);
     when(counter.getCount()).thenReturn(100L);
 
-    reporter.report(emptyGaugeMap, this.<Counter>map("counter", counter), this.<Histogram>map(),
+    reporter.report(emptyGaugeMap, this.<Counter>map("%s.counter", counter), this.<Histogram>map(),
         this.<Meter>map(), this.<Timer>map());
 
     final InOrder inOrder = inOrder(statsD);
     inOrder.verify(statsD).connect();
-    inOrder.verify(statsD).send("prefix.counter", "100");
+    inOrder.verify(statsD).send("prefix.suffix.counter", "100");
     inOrder.verify(statsD).close();
   }
 
@@ -159,23 +160,23 @@ public class StatsDReporterTest {
 
     when(histogram.getSnapshot()).thenReturn(snapshot);
 
-    reporter.report(emptyGaugeMap, this.<Counter>map(), this.<Histogram>map("histogram", histogram),
+    reporter.report(emptyGaugeMap, this.<Counter>map(), this.<Histogram>map("histogram.%s", histogram),
         this.<Meter>map(), this.<Timer>map());
 
     final InOrder inOrder = inOrder(statsD);
 
     inOrder.verify(statsD).connect();
-    verify(statsD).send("prefix.histogram.samples", "1");
-    verify(statsD).send("prefix.histogram.max", "2");
-    verify(statsD).send("prefix.histogram.mean", "3.00");
-    verify(statsD).send("prefix.histogram.min", "4");
-    verify(statsD).send("prefix.histogram.stddev", "5.00");
-    verify(statsD).send("prefix.histogram.p50", "6.00");
-    verify(statsD).send("prefix.histogram.p75", "7.00");
-    verify(statsD).send("prefix.histogram.p95", "8.00");
-    verify(statsD).send("prefix.histogram.p98", "9.00");
-    verify(statsD).send("prefix.histogram.p99", "10.00");
-    inOrder.verify(statsD).send("prefix.histogram.p999", "11.00");
+    verify(statsD).send("prefix.histogram.suffix.samples", "1");
+    verify(statsD).send("prefix.histogram.suffix.max", "2");
+    verify(statsD).send("prefix.histogram.suffix.mean", "3.00");
+    verify(statsD).send("prefix.histogram.suffix.min", "4");
+    verify(statsD).send("prefix.histogram.suffix.stddev", "5.00");
+    verify(statsD).send("prefix.histogram.suffix.p50", "6.00");
+    verify(statsD).send("prefix.histogram.suffix.p75", "7.00");
+    verify(statsD).send("prefix.histogram.suffix.p95", "8.00");
+    verify(statsD).send("prefix.histogram.suffix.p98", "9.00");
+    verify(statsD).send("prefix.histogram.suffix.p99", "10.00");
+    inOrder.verify(statsD).send("prefix.histogram.suffix.p999", "11.00");
 
     inOrder.verify(statsD).close();
   }
@@ -189,16 +190,16 @@ public class StatsDReporterTest {
     when(meter.getFifteenMinuteRate()).thenReturn(4.0);
     when(meter.getMeanRate()).thenReturn(5.0);
 
-    reporter.report(emptyGaugeMap, this.<Counter>map(), this.<Histogram>map(), this.<Meter>map("meter", meter),
+    reporter.report(emptyGaugeMap, this.<Counter>map(), this.<Histogram>map(), this.<Meter>map("meter.%s", meter),
         this.<Timer>map());
 
     final InOrder inOrder = inOrder(statsD);
     inOrder.verify(statsD).connect();
-    verify(statsD).send("prefix.meter.samples", "1");
-    verify(statsD).send("prefix.meter.m1_rate", "2.00");
-    verify(statsD).send("prefix.meter.m5_rate", "3.00");
-    verify(statsD).send("prefix.meter.m15_rate", "4.00");
-    inOrder.verify(statsD).send("prefix.meter.mean_rate", "5.00");
+    verify(statsD).send("prefix.meter.suffix.samples", "1");
+    verify(statsD).send("prefix.meter.suffix.m1_rate", "2.00");
+    verify(statsD).send("prefix.meter.suffix.m5_rate", "3.00");
+    verify(statsD).send("prefix.meter.suffix.m15_rate", "4.00");
+    inOrder.verify(statsD).send("prefix.meter.suffix.mean_rate", "5.00");
     inOrder.verify(statsD).close();
 
 
@@ -228,25 +229,25 @@ public class StatsDReporterTest {
     when(timer.getSnapshot()).thenReturn(snapshot);
 
     reporter.report(emptyGaugeMap, this.<Counter>map(), this.<Histogram>map(), this.<Meter>map(),
-        map("timer", timer));
+        map("timer.%s", timer));
 
     final InOrder inOrder = inOrder(statsD);
     inOrder.verify(statsD).connect();
-    verify(statsD).send("prefix.timer.max", "100.00");
-    verify(statsD).send("prefix.timer.mean", "200.00");
-    verify(statsD).send("prefix.timer.min", "300.00");
-    verify(statsD).send("prefix.timer.stddev", "400.00");
-    verify(statsD).send("prefix.timer.p50", "500.00");
-    verify(statsD).send("prefix.timer.p75", "600.00");
-    verify(statsD).send("prefix.timer.p95", "700.00");
-    verify(statsD).send("prefix.timer.p98", "800.00");
-    verify(statsD).send("prefix.timer.p99", "900.00");
-    verify(statsD).send("prefix.timer.p999", "1000.00");
-    verify(statsD).send("prefix.timer.samples", "1");
-    verify(statsD).send("prefix.timer.m1_rate", "3.00");
-    verify(statsD).send("prefix.timer.m5_rate", "4.00");
-    verify(statsD).send("prefix.timer.m15_rate", "5.00");
-    inOrder.verify(statsD).send("prefix.timer.mean_rate", "2.00");
+    verify(statsD).send("prefix.timer.suffix.max", "100.00");
+    verify(statsD).send("prefix.timer.suffix.mean", "200.00");
+    verify(statsD).send("prefix.timer.suffix.min", "300.00");
+    verify(statsD).send("prefix.timer.suffix.stddev", "400.00");
+    verify(statsD).send("prefix.timer.suffix.p50", "500.00");
+    verify(statsD).send("prefix.timer.suffix.p75", "600.00");
+    verify(statsD).send("prefix.timer.suffix.p95", "700.00");
+    verify(statsD).send("prefix.timer.suffix.p98", "800.00");
+    verify(statsD).send("prefix.timer.suffix.p99", "900.00");
+    verify(statsD).send("prefix.timer.suffix.p999", "1000.00");
+    verify(statsD).send("prefix.timer.suffix.samples", "1");
+    verify(statsD).send("prefix.timer.suffix.m1_rate", "3.00");
+    verify(statsD).send("prefix.timer.suffix.m5_rate", "4.00");
+    verify(statsD).send("prefix.timer.suffix.m15_rate", "5.00");
+    inOrder.verify(statsD).send("prefix.timer.suffix.mean_rate", "2.00");
     inOrder.verify(statsD).close();
   }
 
