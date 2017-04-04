@@ -159,6 +159,9 @@ public class StatsDReporter extends ScheduledReporter {
     }
   }
 
+  private String cleanKey(String key) {
+    return key.replaceAll("[\\/:]",".").replaceAll("\\.\\.",".");
+  }
 
   @Override
   @SuppressWarnings("rawtypes") //Metrics 3.0 interface specifies the raw Gauge type
@@ -172,23 +175,23 @@ public class StatsDReporter extends ScheduledReporter {
       statsD.connect();
 
       for (Map.Entry<String, Gauge> entry : gauges.entrySet()) {
-        reportGauge(entry.getKey(), entry.getValue());
+        reportGauge(cleanKey(entry.getKey()), entry.getValue());
       }
 
       for (Map.Entry<String, Counter> entry : counters.entrySet()) {
-        reportCounter(entry.getKey(), entry.getValue());
+        reportCounter(cleanKey(entry.getKey()), entry.getValue());
       }
 
       for (Map.Entry<String, Histogram> entry : histograms.entrySet()) {
-        reportHistogram(entry.getKey(), entry.getValue());
+        reportHistogram(cleanKey(entry.getKey()), entry.getValue());
       }
 
       for (Map.Entry<String, Meter> entry : meters.entrySet()) {
-        reportMetered(entry.getKey(), entry.getValue());
+        reportMetered(cleanKey(entry.getKey()), entry.getValue());
       }
 
       for (Map.Entry<String, Timer> entry : timers.entrySet()) {
-        reportTimer(entry.getKey(), entry.getValue());
+        reportTimer(cleanKey(entry.getKey()), entry.getValue());
       }
     } catch (IOException e) {
       LOG.warn("Unable to report to StatsD", statsD, e);
