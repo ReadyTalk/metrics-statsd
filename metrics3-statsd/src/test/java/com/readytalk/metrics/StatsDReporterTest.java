@@ -15,16 +15,10 @@
  */
 package com.readytalk.metrics;
 
-import com.codahale.metrics.Counter;
-import com.codahale.metrics.Gauge;
-import com.codahale.metrics.Histogram;
-import com.codahale.metrics.Meter;
-import com.codahale.metrics.MetricFilter;
-import com.codahale.metrics.MetricRegistry;
-import com.codahale.metrics.Snapshot;
-import com.codahale.metrics.Timer;
+import com.codahale.metrics.*;
 import org.junit.Test;
 import org.mockito.InOrder;
+import org.mockito.MockSettings;
 
 import java.util.SortedMap;
 import java.util.TreeMap;
@@ -39,20 +33,53 @@ import static org.mockito.Mockito.when;
 public class StatsDReporterTest {
   private final StatsD statsD = mock(StatsD.class);
   private final MetricRegistry registry = mock(MetricRegistry.class);
-  private final StatsDReporter reporter = StatsDReporter.forRegistry(registry)
-      .prefixedWith("prefix")
-      .convertRatesTo(TimeUnit.SECONDS)
-      .convertDurationsTo(TimeUnit.MILLISECONDS)
-      .filter(MetricFilter.ALL)
-      .build(statsD);
+//  private final StatsDReporter reporter = StatsDReporter.forRegistry(registry)
+//      .prefixedWith("prefix")
+//      .convertRatesTo(TimeUnit.SECONDS)
+//      .convertDurationsTo(TimeUnit.MILLISECONDS)
+//      .filter(MetricFilter.ALL)
+//      .build(statsD);
 
   @SuppressWarnings("rawtypes") //Metrics library specifies the raw Gauge type unfortunately
   private final SortedMap<String, Gauge> emptyGaugeMap = new TreeMap<String, Gauge>();
 
+  private StatsDReporter defaultReporter() {
+    return StatsDReporter.forRegistry(registry)
+            .prefixedWith("prefix")
+            .convertRatesTo(TimeUnit.SECONDS)
+            .convertDurationsTo(TimeUnit.MILLISECONDS)
+            .filter(MetricFilter.ALL)
+            .build(statsD);
+  }
+
+  private StatsDReporter reporterWithFilter(MetricFilter filter) {
+    return StatsDReporter.forRegistry(registry)
+            .prefixedWith("prefix")
+            .convertRatesTo(TimeUnit.SECONDS)
+            .convertDurationsTo(TimeUnit.MILLISECONDS)
+            .filter(filter)
+            .filterOnReporter()
+            .appendCountPostfixToCounters()
+            .countPostfix("cnt")
+            .build(statsD);
+  }
+
+  private StatsDReporter reporterWithCountingDiffs() {
+    return StatsDReporter.forRegistry(registry)
+            .prefixedWith("prefix")
+            .convertRatesTo(TimeUnit.SECONDS)
+            .convertDurationsTo(TimeUnit.MILLISECONDS)
+            .filter(MetricFilter.ALL)
+            .appendCountPostfixToCounters()
+            .diffCounters()
+            .countPostfix("cnt")
+            .build(statsD);
+  }
+
   @Test
   public void doesNotReportStringGaugeValues() throws Exception {
-    reporter.report(map("gauge", gauge("value")), this.<Counter>map(), this.<Histogram>map(), this.<Meter>map(),
-        this.<Timer>map());
+    defaultReporter().report(map("gauge", gauge("value")), this.<Counter>map(), this.<Histogram>map(), this.<Meter>map(),
+            this.<Timer>map());
 
     final InOrder inOrder = inOrder(statsD);
     inOrder.verify(statsD).connect();
@@ -62,8 +89,8 @@ public class StatsDReporterTest {
 
   @Test
   public void reportsByteGaugeValues() throws Exception {
-    reporter.report(map("gauge", gauge((byte) 1)), this.<Counter>map(), this.<Histogram>map(), this.<Meter>map(),
-        this.<Timer>map());
+    defaultReporter().report(map("gauge", gauge((byte) 1)), this.<Counter>map(), this.<Histogram>map(), this.<Meter>map(),
+            this.<Timer>map());
 
     final InOrder inOrder = inOrder(statsD);
     inOrder.verify(statsD).connect();
@@ -73,8 +100,8 @@ public class StatsDReporterTest {
 
   @Test
   public void reportsShortGaugeValues() throws Exception {
-    reporter.report(map("gauge", gauge((short) 1)), this.<Counter>map(), this.<Histogram>map(), this.<Meter>map(),
-        this.<Timer>map());
+    defaultReporter().report(map("gauge", gauge((short) 1)), this.<Counter>map(), this.<Histogram>map(), this.<Meter>map(),
+            this.<Timer>map());
 
     final InOrder inOrder = inOrder(statsD);
     inOrder.verify(statsD).connect();
@@ -84,8 +111,8 @@ public class StatsDReporterTest {
 
   @Test
   public void reportsIntegerGaugeValues() throws Exception {
-    reporter.report(map("gauge", gauge(1)), this.<Counter>map(), this.<Histogram>map(), this.<Meter>map(),
-        this.<Timer>map());
+    defaultReporter().report(map("gauge", gauge(1)), this.<Counter>map(), this.<Histogram>map(), this.<Meter>map(),
+            this.<Timer>map());
 
     final InOrder inOrder = inOrder(statsD);
     inOrder.verify(statsD).connect();
@@ -95,8 +122,8 @@ public class StatsDReporterTest {
 
   @Test
   public void reportsLongGaugeValues() throws Exception {
-    reporter.report(map("gauge", gauge(1L)), this.<Counter>map(), this.<Histogram>map(), this.<Meter>map(),
-        this.<Timer>map());
+    defaultReporter().report(map("gauge", gauge(1L)), this.<Counter>map(), this.<Histogram>map(), this.<Meter>map(),
+            this.<Timer>map());
 
     final InOrder inOrder = inOrder(statsD);
     inOrder.verify(statsD).connect();
@@ -106,8 +133,8 @@ public class StatsDReporterTest {
 
   @Test
   public void reportsFloatGaugeValues() throws Exception {
-    reporter.report(map("gauge", gauge(1.1f)), this.<Counter>map(), this.<Histogram>map(), this.<Meter>map(),
-        this.<Timer>map());
+    defaultReporter().report(map("gauge", gauge(1.1f)), this.<Counter>map(), this.<Histogram>map(), this.<Meter>map(),
+            this.<Timer>map());
 
     final InOrder inOrder = inOrder(statsD);
     inOrder.verify(statsD).connect();
@@ -117,8 +144,8 @@ public class StatsDReporterTest {
 
   @Test
   public void reportsDoubleGaugeValues() throws Exception {
-    reporter.report(map("gauge", gauge(1.1)), this.<Counter>map(), this.<Histogram>map(), this.<Meter>map(),
-        this.<Timer>map());
+    defaultReporter().report(map("gauge", gauge(1.1)), this.<Counter>map(), this.<Histogram>map(), this.<Meter>map(),
+            this.<Timer>map());
 
     final InOrder inOrder = inOrder(statsD);
     inOrder.verify(statsD).connect();
@@ -131,8 +158,8 @@ public class StatsDReporterTest {
     final Counter counter = mock(Counter.class);
     when(counter.getCount()).thenReturn(100L);
 
-    reporter.report(emptyGaugeMap, this.<Counter>map("counter", counter), this.<Histogram>map(),
-        this.<Meter>map(), this.<Timer>map());
+    defaultReporter().report(emptyGaugeMap, this.<Counter>map("counter", counter), this.<Histogram>map(),
+            this.<Meter>map(), this.<Timer>map());
 
     final InOrder inOrder = inOrder(statsD);
     inOrder.verify(statsD).connect();
@@ -159,8 +186,8 @@ public class StatsDReporterTest {
 
     when(histogram.getSnapshot()).thenReturn(snapshot);
 
-    reporter.report(emptyGaugeMap, this.<Counter>map(), this.<Histogram>map("histogram", histogram),
-        this.<Meter>map(), this.<Timer>map());
+    defaultReporter().report(emptyGaugeMap, this.<Counter>map(), this.<Histogram>map("histogram", histogram),
+            this.<Meter>map(), this.<Timer>map());
 
     final InOrder inOrder = inOrder(statsD);
 
@@ -189,8 +216,8 @@ public class StatsDReporterTest {
     when(meter.getFifteenMinuteRate()).thenReturn(4.0);
     when(meter.getMeanRate()).thenReturn(5.0);
 
-    reporter.report(emptyGaugeMap, this.<Counter>map(), this.<Histogram>map(), this.<Meter>map("meter", meter),
-        this.<Timer>map());
+    defaultReporter().report(emptyGaugeMap, this.<Counter>map(), this.<Histogram>map(), this.<Meter>map("meter", meter),
+            this.<Timer>map());
 
     final InOrder inOrder = inOrder(statsD);
     inOrder.verify(statsD).connect();
@@ -227,8 +254,8 @@ public class StatsDReporterTest {
 
     when(timer.getSnapshot()).thenReturn(snapshot);
 
-    reporter.report(emptyGaugeMap, this.<Counter>map(), this.<Histogram>map(), this.<Meter>map(),
-        map("timer", timer));
+    defaultReporter().report(emptyGaugeMap, this.<Counter>map(), this.<Histogram>map(), this.<Meter>map(),
+            map("timer", timer));
 
     final InOrder inOrder = inOrder(statsD);
     inOrder.verify(statsD).connect();
@@ -243,6 +270,127 @@ public class StatsDReporterTest {
     verify(statsD).send("prefix.timer.p99", "900.00");
     verify(statsD).send("prefix.timer.p999", "1000.00");
     verify(statsD).send("prefix.timer.samples", "1");
+    verify(statsD).send("prefix.timer.m1_rate", "3.00");
+    verify(statsD).send("prefix.timer.m5_rate", "4.00");
+    verify(statsD).send("prefix.timer.m15_rate", "5.00");
+    inOrder.verify(statsD).send("prefix.timer.mean_rate", "2.00");
+    inOrder.verify(statsD).close();
+  }
+
+  @Test
+  public void reportsDiffs() throws Exception {
+    final Counter counter = mock(Counter.class);
+    final Timer timer = mock(Timer.class);
+    final Histogram histogram = mock(Histogram.class);
+    final Meter meter = mock(Meter.class);
+
+    when(counter.getCount()).thenReturn(100L, 101L, 106L);
+    when(timer.getCount()).thenReturn(200L, 210L, 226L);
+    when(histogram.getCount()).thenReturn(40L, 50L, 51L);
+    when(meter.getCount()).thenReturn(1L, 1L, 999L);
+
+    when(timer.getSnapshot()).thenReturn(mock(Snapshot.class));
+    when(histogram.getSnapshot()).thenReturn(mock(Snapshot.class));
+
+    StatsDReporter reporter = reporterWithCountingDiffs();
+
+    String[] counterExpectedValues = new String[] {"100", "1", "5"};
+    String[] timerExpectedValues = new String[] {"200", "10", "16"};
+    String[] histogramExpectedValues = new String[] {"40", "10", "1"};
+    String[] meterExpectedValues = new String[] {"1", "0", "998"};
+
+    for (int i=0; i < 3; i++) {
+      reporter.report(emptyGaugeMap,
+              this.<Counter>map("counter", counter),
+              this.<Histogram>map("histo", histogram),
+              this.<Meter>map("metey", meter),
+              this.<Timer>map("timeless", timer));
+
+      final InOrder inOrder = inOrder(statsD);
+      inOrder.verify(statsD).connect();
+      inOrder.verify(statsD).send("prefix.counter.cnt", counterExpectedValues[i]);
+      inOrder.verify(statsD).send("prefix.histo.cnt", histogramExpectedValues[i]);
+      inOrder.verify(statsD).send("prefix.metey.cnt", meterExpectedValues[i]);
+      inOrder.verify(statsD).send("prefix.timeless.cnt", timerExpectedValues[i]);
+      inOrder.verify(statsD).close();
+    }
+  }
+
+  @Test
+  public void filtersOnFullMetricNameIncludingPostfix() throws Exception {
+    final Counter counter = mock(Counter.class);
+    final Meter meter = mock(Meter.class);
+
+    when(counter.getCount()).thenReturn(100L);
+    when(meter.getCount()).thenReturn(200L);
+
+    StatsDReporter reporter = reporterWithFilter(new MetricFilter() {
+      @Override
+      public boolean matches(String name, Metric metric) {
+        return name.contentEquals("prefix.counter.cnt"); // only match the counter
+      }
+    });
+
+    reporter.report(emptyGaugeMap,
+            this.<Counter>map("counter", counter),
+            this.<Histogram>map(),
+            this.<Meter>map("meter", meter),
+            this.<Timer>map());
+
+    final InOrder inOrder = inOrder(statsD);
+    inOrder.verify(statsD).connect();
+    inOrder.verify(statsD).send("prefix.counter.cnt", "100");
+    inOrder.verify(statsD).close();
+  }
+
+  @Test
+  public void filtersOutAFewTimerParts() throws Exception {
+    final Timer timer = mock(Timer.class);
+    when(timer.getCount()).thenReturn(1L);
+    when(timer.getMeanRate()).thenReturn(2.0);
+    when(timer.getOneMinuteRate()).thenReturn(3.0);
+    when(timer.getFiveMinuteRate()).thenReturn(4.0);
+    when(timer.getFifteenMinuteRate()).thenReturn(5.0);
+
+    final Snapshot snapshot = mock(Snapshot.class);
+    when(snapshot.getMax()).thenReturn(TimeUnit.MILLISECONDS.toNanos(100));
+    when(snapshot.getMean()).thenReturn((double) TimeUnit.MILLISECONDS.toNanos(200));
+    when(snapshot.getMin()).thenReturn(TimeUnit.MILLISECONDS.toNanos(300));
+    when(snapshot.getStdDev()).thenReturn((double) TimeUnit.MILLISECONDS.toNanos(400));
+    when(snapshot.getMedian()).thenReturn((double) TimeUnit.MILLISECONDS.toNanos(500));
+    when(snapshot.get75thPercentile()).thenReturn((double) TimeUnit.MILLISECONDS.toNanos(600));
+    when(snapshot.get95thPercentile()).thenReturn((double) TimeUnit.MILLISECONDS.toNanos(700));
+    when(snapshot.get98thPercentile()).thenReturn((double) TimeUnit.MILLISECONDS.toNanos(800));
+    when(snapshot.get99thPercentile()).thenReturn((double) TimeUnit.MILLISECONDS.toNanos(900));
+    when(snapshot.get999thPercentile()).thenReturn((double) TimeUnit.MILLISECONDS.toNanos(1000));
+
+    when(timer.getSnapshot()).thenReturn(snapshot);
+
+    StatsDReporter reporter = reporterWithFilter(new MetricFilter() {
+      @Override
+      public boolean matches(String name, Metric metric) {
+        if (name.endsWith(".p50") || name.endsWith(".p98") || name.endsWith(".p999") || name.endsWith(".stddev") || name.endsWith(".mean")) {
+          return false;
+        }
+
+        return true;
+      }
+    });
+
+    reporter.report(emptyGaugeMap,
+            this.<Counter>map(),
+            this.<Histogram>map(),
+            this.<Meter>map(),
+            this.<Timer>map("timer", timer));
+
+    final InOrder inOrder = inOrder(statsD);
+    inOrder.verify(statsD).connect();
+    verify(statsD).send("prefix.timer.max", "100.00");
+    verify(statsD).send("prefix.timer.min", "300.00");
+    verify(statsD).send("prefix.timer.p75", "600.00");
+    verify(statsD).send("prefix.timer.p95", "700.00");
+    verify(statsD).send("prefix.timer.p99", "900.00");
+    verify(statsD).send("prefix.timer.cnt", "1");
     verify(statsD).send("prefix.timer.m1_rate", "3.00");
     verify(statsD).send("prefix.timer.m5_rate", "4.00");
     verify(statsD).send("prefix.timer.m15_rate", "5.00");

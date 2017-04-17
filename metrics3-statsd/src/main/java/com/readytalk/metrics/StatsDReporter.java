@@ -15,16 +15,7 @@
  */
 package com.readytalk.metrics;
 
-import com.codahale.metrics.Counter;
-import com.codahale.metrics.Gauge;
-import com.codahale.metrics.Histogram;
-import com.codahale.metrics.Meter;
-import com.codahale.metrics.Metered;
-import com.codahale.metrics.MetricFilter;
-import com.codahale.metrics.MetricRegistry;
-import com.codahale.metrics.ScheduledReporter;
-import com.codahale.metrics.Snapshot;
-import com.codahale.metrics.Timer;
+import com.codahale.metrics.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,7 +27,9 @@ import java.math.BigInteger;
 import java.util.Locale;
 import java.util.Map;
 import java.util.SortedMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * A reporter which publishes metric values to a StatsD server.
@@ -45,20 +38,35 @@ import java.util.concurrent.TimeUnit;
  */
 @NotThreadSafe
 public class StatsDReporter extends ScheduledReporter {
+  public static final String COUNT_POSTFIX_DEFAULT = "samples";
+
   private static final Logger LOG = LoggerFactory.getLogger(StatsDReporter.class);
 
   private final StatsD statsD;
   private final String prefix;
+  private final MetricFilter filter;
+  private final boolean diffCounters;
+  private final ConcurrentHashMap<String, AtomicLong> counterCache = new ConcurrentHashMap<String, AtomicLong>();
+  private final String countPostfix;
+  private final boolean appendCountPostfixToCounters;
 
-  private StatsDReporter(final MetricRegistry registry,
+  public StatsDReporter(final MetricRegistry registry,
                          final StatsD statsD,
                          final String prefix,
                          final TimeUnit rateUnit,
                          final TimeUnit durationUnit,
-                         final MetricFilter filter) {
-    super(registry, "statsd-reporter", filter, rateUnit, durationUnit);
+                         final MetricFilter filter,
+                         final boolean filterOnReporter,
+                         final boolean diffCounters,
+                         final String countPostfix,
+                         final boolean appendCountPostfixToCounters) {
+    super(registry, "statsd-reporter", filterOnReporter ? MetricFilter.ALL : filter, rateUnit, durationUnit);
     this.statsD = statsD;
     this.prefix = prefix;
+    this.filter = filterOnReporter ? filter : MetricFilter.ALL;
+    this.diffCounters = diffCounters;
+    this.countPostfix = countPostfix;
+    this.appendCountPostfixToCounters = appendCountPostfixToCounters;
   }
 
   /**
@@ -83,6 +91,10 @@ public class StatsDReporter extends ScheduledReporter {
     private TimeUnit rateUnit;
     private TimeUnit durationUnit;
     private MetricFilter filter;
+    private boolean filterOnReporter;
+    private boolean diffCounters;
+    private String countPostfix;
+    private boolean appendCountPostfixToCounters;
 
     private Builder(final MetricRegistry registry) {
       this.registry = registry;
@@ -90,6 +102,10 @@ public class StatsDReporter extends ScheduledReporter {
       this.rateUnit = TimeUnit.SECONDS;
       this.durationUnit = TimeUnit.MILLISECONDS;
       this.filter = MetricFilter.ALL;
+      this.filterOnReporter = false;
+      this.diffCounters = false;
+      this.countPostfix = COUNT_POSTFIX_DEFAULT;
+      this.appendCountPostfixToCounters = false;
     }
 
     /**
@@ -137,6 +153,51 @@ public class StatsDReporter extends ScheduledReporter {
     }
 
     /**
+     * By default filters are applied to the registry, this allows you to filter out entire metrics.  If however you
+     * want to filter parts of a metric e.g. .p50 then you should use this option to apply the filter to the reporter
+     * which will be called for all individual metric parts.
+     * @return {@code this}
+     */
+    public Builder filterOnReporter() {
+      this.filterOnReporter = true;
+      return this;
+    }
+
+    /**
+     * The default behavior for .count (applicable to {@link com.codahale.metrics.Timer},
+     * {@link com.codahale.metrics.Meter}, {@link com.codahale.metrics.Histogram}, {@link com.codahale.metrics.Counter})
+     * is that they continue to increase, this sets the reporter to report the difference vs the previously reported
+     * value... useful for graphing results.
+     *
+     * @return {@code this}
+     */
+    public Builder diffCounters() {
+      this.diffCounters = true;
+      return this;
+    }
+
+    /**
+     * Override the default post-fix {@value StatsDReporter#COUNT_POSTFIX_DEFAULT} for counting values.
+     *
+     * @return {@code this}
+     */
+    public Builder countPostfix(final String postFix) {
+      this.countPostfix = postFix;
+      return this;
+    }
+
+    /**
+     * By default the count post-fix is not appended to {@link com.codahale.metrics.Counter}s,
+     * use this option to set the reporter to append it.
+     *
+     * @return {@code this}
+     */
+    public Builder appendCountPostfixToCounters() {
+      this.appendCountPostfixToCounters = true;
+      return this;
+    }
+
+    /**
      * Builds a {@link StatsDReporter} with the given properties, sending metrics to StatsD at the given host and port.
      *
      * @param host the hostname of the StatsD server.
@@ -155,7 +216,17 @@ public class StatsDReporter extends ScheduledReporter {
      * @return a {@link StatsDReporter}
      */
     public StatsDReporter build(final StatsD statsD) {
-      return new StatsDReporter(registry, statsD, prefix, rateUnit, durationUnit, filter);
+      return new StatsDReporter(
+              registry,
+              statsD,
+              prefix,
+              rateUnit,
+              durationUnit,
+              filter,
+              filterOnReporter,
+              diffCounters,
+              countPostfix,
+              appendCountPostfixToCounters);
     }
   }
 
@@ -201,56 +272,84 @@ public class StatsDReporter extends ScheduledReporter {
     }
   }
 
-  private void reportTimer(final String name, final Timer timer) {
+  protected void reportTimer(final String name, final Timer timer) {
     final Snapshot snapshot = timer.getSnapshot();
 
-    statsD.send(prefix(name, "max"), formatNumber(convertDuration(snapshot.getMax())));
-    statsD.send(prefix(name, "mean"), formatNumber(convertDuration(snapshot.getMean())));
-    statsD.send(prefix(name, "min"), formatNumber(convertDuration(snapshot.getMin())));
-    statsD.send(prefix(name, "stddev"), formatNumber(convertDuration(snapshot.getStdDev())));
-    statsD.send(prefix(name, "p50"), formatNumber(convertDuration(snapshot.getMedian())));
-    statsD.send(prefix(name, "p75"), formatNumber(convertDuration(snapshot.get75thPercentile())));
-    statsD.send(prefix(name, "p95"), formatNumber(convertDuration(snapshot.get95thPercentile())));
-    statsD.send(prefix(name, "p98"), formatNumber(convertDuration(snapshot.get98thPercentile())));
-    statsD.send(prefix(name, "p99"), formatNumber(convertDuration(snapshot.get99thPercentile())));
-    statsD.send(prefix(name, "p999"), formatNumber(convertDuration(snapshot.get999thPercentile())));
+    send(timer, prefix(name, "max"), formatNumber(convertDuration(snapshot.getMax())));
+    send(timer, prefix(name, "mean"), formatNumber(convertDuration(snapshot.getMean())));
+    send(timer, prefix(name, "min"), formatNumber(convertDuration(snapshot.getMin())));
+    send(timer, prefix(name, "stddev"), formatNumber(convertDuration(snapshot.getStdDev())));
+    send(timer, prefix(name, "p50"), formatNumber(convertDuration(snapshot.getMedian())));
+    send(timer, prefix(name, "p75"), formatNumber(convertDuration(snapshot.get75thPercentile())));
+    send(timer, prefix(name, "p95"), formatNumber(convertDuration(snapshot.get95thPercentile())));
+    send(timer, prefix(name, "p98"), formatNumber(convertDuration(snapshot.get98thPercentile())));
+    send(timer, prefix(name, "p99"), formatNumber(convertDuration(snapshot.get99thPercentile())));
+    send(timer, prefix(name, "p999"), formatNumber(convertDuration(snapshot.get999thPercentile())));
 
     reportMetered(name, timer);
   }
 
-  private void reportMetered(final String name, final Metered meter) {
-    statsD.send(prefix(name, "samples"), formatNumber(meter.getCount()));
-    statsD.send(prefix(name, "m1_rate"), formatNumber(convertRate(meter.getOneMinuteRate())));
-    statsD.send(prefix(name, "m5_rate"), formatNumber(convertRate(meter.getFiveMinuteRate())));
-    statsD.send(prefix(name, "m15_rate"), formatNumber(convertRate(meter.getFifteenMinuteRate())));
-    statsD.send(prefix(name, "mean_rate"), formatNumber(convertRate(meter.getMeanRate())));
+  protected void reportMetered(final String name, final Metered meter) {
+    send(meter, prefix(name, countPostfix), formatNumber(countingValue(name, meter)));
+    send(meter, prefix(name, "m1_rate"), formatNumber(convertRate(meter.getOneMinuteRate())));
+    send(meter, prefix(name, "m5_rate"), formatNumber(convertRate(meter.getFiveMinuteRate())));
+    send(meter, prefix(name, "m15_rate"), formatNumber(convertRate(meter.getFifteenMinuteRate())));
+    send(meter, prefix(name, "mean_rate"), formatNumber(convertRate(meter.getMeanRate())));
   }
 
-  private void reportHistogram(final String name, final Histogram histogram) {
+  protected void reportHistogram(final String name, final Histogram histogram) {
     final Snapshot snapshot = histogram.getSnapshot();
-    statsD.send(prefix(name, "samples"), formatNumber(histogram.getCount()));
-    statsD.send(prefix(name, "max"), formatNumber(snapshot.getMax()));
-    statsD.send(prefix(name, "mean"), formatNumber(snapshot.getMean()));
-    statsD.send(prefix(name, "min"), formatNumber(snapshot.getMin()));
-    statsD.send(prefix(name, "stddev"), formatNumber(snapshot.getStdDev()));
-    statsD.send(prefix(name, "p50"), formatNumber(snapshot.getMedian()));
-    statsD.send(prefix(name, "p75"), formatNumber(snapshot.get75thPercentile()));
-    statsD.send(prefix(name, "p95"), formatNumber(snapshot.get95thPercentile()));
-    statsD.send(prefix(name, "p98"), formatNumber(snapshot.get98thPercentile()));
-    statsD.send(prefix(name, "p99"), formatNumber(snapshot.get99thPercentile()));
-    statsD.send(prefix(name, "p999"), formatNumber(snapshot.get999thPercentile()));
+    send(histogram, prefix(name, countPostfix), formatNumber(countingValue(name, histogram)));
+    send(histogram, prefix(name, "max"), formatNumber(snapshot.getMax()));
+    send(histogram, prefix(name, "mean"), formatNumber(snapshot.getMean()));
+    send(histogram, prefix(name, "min"), formatNumber(snapshot.getMin()));
+    send(histogram, prefix(name, "stddev"), formatNumber(snapshot.getStdDev()));
+    send(histogram, prefix(name, "p50"), formatNumber(snapshot.getMedian()));
+    send(histogram, prefix(name, "p75"), formatNumber(snapshot.get75thPercentile()));
+    send(histogram, prefix(name, "p95"), formatNumber(snapshot.get95thPercentile()));
+    send(histogram, prefix(name, "p98"), formatNumber(snapshot.get98thPercentile()));
+    send(histogram, prefix(name, "p99"), formatNumber(snapshot.get99thPercentile()));
+    send(histogram, prefix(name, "p999"), formatNumber(snapshot.get999thPercentile()));
   }
 
-  private void reportCounter(final String name, final Counter counter) {
-    statsD.send(prefix(name), formatNumber(counter.getCount()));
+  protected void reportCounter(final String name, final Counter counter) {
+    String sendName = appendCountPostfixToCounters ? prefix(name, countPostfix) : prefix(name);
+    send(counter, sendName, formatNumber(countingValue(name, counter)));
   }
 
   @SuppressWarnings("rawtypes") //Metrics 3.0 passes us the raw Gauge type
-  private void reportGauge(final String name, final Gauge gauge) {
+  protected void reportGauge(final String name, final Gauge gauge) {
     final String value = format(gauge.getValue());
     if (value != null) {
-      statsD.send(prefix(name), value);
+      send(gauge, prefix(name), value);
     }
+  }
+
+  private long countingValue(final String name, final Counting counting) {
+
+    if (!diffCounters) {
+      return counting.getCount();
+    }
+
+    AtomicLong cachedCount = counterCache.get(name);
+
+    if (cachedCount == null) {
+      AtomicLong newCachedCount = new AtomicLong(0);
+      cachedCount = counterCache.putIfAbsent(name, newCachedCount);
+      if (cachedCount == null) {
+        cachedCount = newCachedCount;
+      }
+    }
+
+    long newCount = counting.getCount();
+    return newCount - cachedCount.getAndSet(newCount);
+  }
+
+  protected void send(final Metric metric, final String name, final String value) {
+    if (!filter.matches(name, metric)) {
+      return;
+    }
+    statsD.send(name, value);
   }
 
   @Nullable
