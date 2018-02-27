@@ -47,6 +47,7 @@ import java.util.concurrent.TimeUnit;
 public class StatsDReporter extends ScheduledReporter {
   private static final Logger LOG = LoggerFactory.getLogger(StatsDReporter.class);
 
+  private final boolean sanitizeKey;
   private final StatsD statsD;
   private final String prefix;
 
@@ -55,10 +56,12 @@ public class StatsDReporter extends ScheduledReporter {
                          final String prefix,
                          final TimeUnit rateUnit,
                          final TimeUnit durationUnit,
-                         final MetricFilter filter) {
+                         final MetricFilter filter,
+                         final boolean sanitizeKey) {
     super(registry, "statsd-reporter", filter, rateUnit, durationUnit);
     this.statsD = statsD;
     this.prefix = prefix;
+    this.sanitizeKey = sanitizeKey;
   }
 
   /**
@@ -79,6 +82,7 @@ public class StatsDReporter extends ScheduledReporter {
   @NotThreadSafe
   public static final class Builder {
     private final MetricRegistry registry;
+    private boolean sanitizeKey;
     private String prefix;
     private TimeUnit rateUnit;
     private TimeUnit durationUnit;
@@ -90,6 +94,17 @@ public class StatsDReporter extends ScheduledReporter {
       this.rateUnit = TimeUnit.SECONDS;
       this.durationUnit = TimeUnit.MILLISECONDS;
       this.filter = MetricFilter.ALL;
+      this.sanitizeKey = false;
+    }
+
+    /**
+     * Sanitize metric key, replace incorrect symbols with -.
+     *
+     * @return {@code this}
+     */
+    public Builder sanitizeKey() {
+      this.sanitizeKey = true;
+      return this;
     }
 
     /**
@@ -155,7 +170,7 @@ public class StatsDReporter extends ScheduledReporter {
      * @return a {@link StatsDReporter}
      */
     public StatsDReporter build(final StatsD statsD) {
-      return new StatsDReporter(registry, statsD, prefix, rateUnit, durationUnit, filter);
+      return new StatsDReporter(registry, statsD, prefix, rateUnit, durationUnit, filter, sanitizeKey);
     }
   }
 
@@ -275,8 +290,16 @@ public class StatsDReporter extends ScheduledReporter {
     return null;
   }
 
+  private String[] sanitize(final String... components) {
+    final String[] sanitized = new String[components.length];
+    for(int i = 0; i < components.length; i++) {
+      sanitized[i] = components[i].replaceAll("[^a-zA-Z_\\-0-9\\.]", "-");
+    }
+    return sanitized;
+  }
+
   private String prefix(final String... components) {
-    return MetricRegistry.name(prefix, components);
+    return MetricRegistry.name(prefix, sanitizeKey ? sanitize(components) : components);
   }
 
   private String formatNumber(final BigInteger n) {
