@@ -1,0 +1,13 @@
+dependencies {
+  compile project(':metrics-statsd-common')
+  provided (
+    'io.dropwizard.metrics:metrics-core:4.0.3'
+  )
+}
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+checkstyle {
+  showViolations = true
+}
