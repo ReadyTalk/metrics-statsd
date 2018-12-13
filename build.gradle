@@ -85,12 +85,26 @@ subprojects {
 
   publishing {
     publications {
-      mavenJava(MavenPublication) {
+      maven(MavenPublication) {
         from components.java
+
+        version System.env['BUILD_NUMBER'] ?: '1.0.0-SNAPSHOT'
 
         artifact sourceJar {
           classifier "sources"
         }
+      }
+    }
+
+    repositories {
+      maven {
+        credentials {
+          username System.env['USERNAME'] ?: ''
+          password System.env['PASSWORD'] ?: ''
+        }
+
+        name = 'ewe-nexus'
+        url = 'http://nexus.sb.karmalab.net/nexus/content/repositories/releases/'
       }
     }
   }
