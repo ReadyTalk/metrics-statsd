@@ -3,5 +3,4 @@ before_install:
     - export TERM=dumb
 jdk:
     - openjdk7
-    - oraclejdk7
-    - oraclejdk8
+    - openjdk8
