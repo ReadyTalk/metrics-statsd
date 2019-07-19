@@ -2,5 +2,4 @@ language: java
 before_install:
     - export TERM=dumb
 jdk:
-    - openjdk7
     - openjdk8
