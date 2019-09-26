@@ -26,6 +26,7 @@ import com.codahale.metrics.Timer;
 import org.junit.Test;
 import org.mockito.InOrder;
 
+import java.io.IOException;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
@@ -202,6 +203,25 @@ public class StatsDReporterTest {
     inOrder.verify(statsD).close();
 
 
+  }
+
+  @Test
+  public void replacesIncorrectSymbolsInMetricName() throws IOException {
+    final StatsDReporter sanitizedReporter = StatsDReporter.forRegistry(registry)
+            .prefixedWith("prefix")
+            .convertRatesTo(TimeUnit.SECONDS)
+            .convertDurationsTo(TimeUnit.MILLISECONDS)
+            .filter(MetricFilter.ALL)
+            .sanitizeKey()
+            .build(statsD);
+
+    sanitizedReporter.report(map("gauge.me:tr#ic", gauge((byte) 1)), this.<Counter>map(), this.<Histogram>map(), this.<Meter>map(),
+            this.<Timer>map());
+
+    final InOrder inOrder = inOrder(statsD);
+    inOrder.verify(statsD).connect();
+    inOrder.verify(statsD).send("prefix.gauge.me-tr-ic", "1");
+    inOrder.verify(statsD).close();
   }
 
   @Test
