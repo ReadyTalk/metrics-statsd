@@ -49,16 +49,19 @@ public class StatsDReporter extends ScheduledReporter {
 
   private final StatsD statsD;
   private final String prefix;
+  private final String suffix;
 
   private StatsDReporter(final MetricRegistry registry,
                          final StatsD statsD,
                          final String prefix,
+                         final String suffix,
                          final TimeUnit rateUnit,
                          final TimeUnit durationUnit,
                          final MetricFilter filter) {
     super(registry, "statsd-reporter", filter, rateUnit, durationUnit);
     this.statsD = statsD;
     this.prefix = prefix;
+    this.suffix = suffix;
   }
 
   /**
@@ -80,6 +83,7 @@ public class StatsDReporter extends ScheduledReporter {
   public static final class Builder {
     private final MetricRegistry registry;
     private String prefix;
+    private String suffix;
     private TimeUnit rateUnit;
     private TimeUnit durationUnit;
     private MetricFilter filter;
@@ -87,6 +91,7 @@ public class StatsDReporter extends ScheduledReporter {
     private Builder(final MetricRegistry registry) {
       this.registry = registry;
       this.prefix = null;
+      this.suffix = null;
       this.rateUnit = TimeUnit.SECONDS;
       this.durationUnit = TimeUnit.MILLISECONDS;
       this.filter = MetricFilter.ALL;
@@ -103,6 +108,16 @@ public class StatsDReporter extends ScheduledReporter {
       return this;
     }
 
+    /**
+     * Suffix all metric names with the given string.
+     *
+     * @param _suffix the suffix for all metric names
+     * @return {@code this}
+     */
+    public Builder suffixedWith(@Nullable final String _suffix) {
+      this.suffix = _suffix;
+      return this;
+    }
     /**
      * Convert rates to the given time unit.
      *
@@ -155,7 +170,7 @@ public class StatsDReporter extends ScheduledReporter {
      * @return a {@link StatsDReporter}
      */
     public StatsDReporter build(final StatsD statsD) {
-      return new StatsDReporter(registry, statsD, prefix, rateUnit, durationUnit, filter);
+      return new StatsDReporter(registry, statsD, prefix, suffix, rateUnit, durationUnit, filter);
     }
   }
 
@@ -204,52 +219,52 @@ public class StatsDReporter extends ScheduledReporter {
   private void reportTimer(final String name, final Timer timer) {
     final Snapshot snapshot = timer.getSnapshot();
 
-    statsD.send(prefix(name, "max"), formatNumber(convertDuration(snapshot.getMax())));
-    statsD.send(prefix(name, "mean"), formatNumber(convertDuration(snapshot.getMean())));
-    statsD.send(prefix(name, "min"), formatNumber(convertDuration(snapshot.getMin())));
-    statsD.send(prefix(name, "stddev"), formatNumber(convertDuration(snapshot.getStdDev())));
-    statsD.send(prefix(name, "p50"), formatNumber(convertDuration(snapshot.getMedian())));
-    statsD.send(prefix(name, "p75"), formatNumber(convertDuration(snapshot.get75thPercentile())));
-    statsD.send(prefix(name, "p95"), formatNumber(convertDuration(snapshot.get95thPercentile())));
-    statsD.send(prefix(name, "p98"), formatNumber(convertDuration(snapshot.get98thPercentile())));
-    statsD.send(prefix(name, "p99"), formatNumber(convertDuration(snapshot.get99thPercentile())));
-    statsD.send(prefix(name, "p999"), formatNumber(convertDuration(snapshot.get999thPercentile())));
+    statsD.send(suffix(prefix(name, "max")), formatNumber(convertDuration(snapshot.getMax())));
+    statsD.send(suffix(prefix(name, "mean")), formatNumber(convertDuration(snapshot.getMean())));
+    statsD.send(suffix(prefix(name, "min")), formatNumber(convertDuration(snapshot.getMin())));
+    statsD.send(suffix(prefix(name, "stddev")), formatNumber(convertDuration(snapshot.getStdDev())));
+    statsD.send(suffix(prefix(name, "p50")), formatNumber(convertDuration(snapshot.getMedian())));
+    statsD.send(suffix(prefix(name, "p75")), formatNumber(convertDuration(snapshot.get75thPercentile())));
+    statsD.send(suffix(prefix(name, "p95")), formatNumber(convertDuration(snapshot.get95thPercentile())));
+    statsD.send(suffix(prefix(name, "p98")), formatNumber(convertDuration(snapshot.get98thPercentile())));
+    statsD.send(suffix(prefix(name, "p99")), formatNumber(convertDuration(snapshot.get99thPercentile())));
+    statsD.send(suffix(prefix(name, "p999")), formatNumber(convertDuration(snapshot.get999thPercentile())));
 
     reportMetered(name, timer);
   }
 
   private void reportMetered(final String name, final Metered meter) {
-    statsD.send(prefix(name, "samples"), formatNumber(meter.getCount()));
-    statsD.send(prefix(name, "m1_rate"), formatNumber(convertRate(meter.getOneMinuteRate())));
-    statsD.send(prefix(name, "m5_rate"), formatNumber(convertRate(meter.getFiveMinuteRate())));
-    statsD.send(prefix(name, "m15_rate"), formatNumber(convertRate(meter.getFifteenMinuteRate())));
-    statsD.send(prefix(name, "mean_rate"), formatNumber(convertRate(meter.getMeanRate())));
+    statsD.send(suffix(prefix(name, "samples")), formatNumber(meter.getCount()));
+    statsD.send(suffix(prefix(name, "m1_rate")), formatNumber(convertRate(meter.getOneMinuteRate())));
+    statsD.send(suffix(prefix(name, "m5_rate")), formatNumber(convertRate(meter.getFiveMinuteRate())));
+    statsD.send(suffix(prefix(name, "m15_rate")), formatNumber(convertRate(meter.getFifteenMinuteRate())));
+    statsD.send(suffix(prefix(name, "mean_rate")), formatNumber(convertRate(meter.getMeanRate())));
   }
 
   private void reportHistogram(final String name, final Histogram histogram) {
     final Snapshot snapshot = histogram.getSnapshot();
-    statsD.send(prefix(name, "samples"), formatNumber(histogram.getCount()));
-    statsD.send(prefix(name, "max"), formatNumber(snapshot.getMax()));
-    statsD.send(prefix(name, "mean"), formatNumber(snapshot.getMean()));
-    statsD.send(prefix(name, "min"), formatNumber(snapshot.getMin()));
-    statsD.send(prefix(name, "stddev"), formatNumber(snapshot.getStdDev()));
-    statsD.send(prefix(name, "p50"), formatNumber(snapshot.getMedian()));
-    statsD.send(prefix(name, "p75"), formatNumber(snapshot.get75thPercentile()));
-    statsD.send(prefix(name, "p95"), formatNumber(snapshot.get95thPercentile()));
-    statsD.send(prefix(name, "p98"), formatNumber(snapshot.get98thPercentile()));
-    statsD.send(prefix(name, "p99"), formatNumber(snapshot.get99thPercentile()));
-    statsD.send(prefix(name, "p999"), formatNumber(snapshot.get999thPercentile()));
+    statsD.send(suffix(prefix(name, "samples")), formatNumber(histogram.getCount()));
+    statsD.send(suffix(prefix(name, "max")), formatNumber(snapshot.getMax()));
+    statsD.send(suffix(prefix(name, "mean")), formatNumber(snapshot.getMean()));
+    statsD.send(suffix(prefix(name, "min")), formatNumber(snapshot.getMin()));
+    statsD.send(suffix(prefix(name, "stddev")), formatNumber(snapshot.getStdDev()));
+    statsD.send(suffix(prefix(name, "p50")), formatNumber(snapshot.getMedian()));
+    statsD.send(suffix(prefix(name, "p75")), formatNumber(snapshot.get75thPercentile()));
+    statsD.send(suffix(prefix(name, "p95")), formatNumber(snapshot.get95thPercentile()));
+    statsD.send(suffix(prefix(name, "p98")), formatNumber(snapshot.get98thPercentile()));
+    statsD.send(suffix(prefix(name, "p99")), formatNumber(snapshot.get99thPercentile()));
+    statsD.send(suffix(prefix(name, "p999")), formatNumber(snapshot.get999thPercentile()));
   }
 
   private void reportCounter(final String name, final Counter counter) {
-    statsD.send(prefix(name), formatNumber(counter.getCount()));
+    statsD.send(suffix(prefix(name)), formatNumber(counter.getCount()));
   }
 
   @SuppressWarnings("rawtypes") //Metrics 3.0 passes us the raw Gauge type
   private void reportGauge(final String name, final Gauge gauge) {
     final String value = format(gauge.getValue());
     if (value != null) {
-      statsD.send(prefix(name), value);
+      statsD.send(suffix(prefix(name)), value);
     }
   }
 
@@ -277,6 +292,13 @@ public class StatsDReporter extends ScheduledReporter {
 
   private String prefix(final String... components) {
     return MetricRegistry.name(prefix, components);
+  }
+
+  private String suffix(final String string) {
+    if (suffix != null && !suffix.isEmpty()) {
+      return string + suffix;
+    }
+    return string;
   }
 
   private String formatNumber(final BigInteger n) {
