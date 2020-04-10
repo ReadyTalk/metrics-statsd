@@ -50,7 +50,7 @@ public class StatsD implements Closeable {
    * @param host the hostname of the StatsD server.
    * @param port the port of the StatsD server. This is typically 8125.
    */
-  StatsD(final String host, final int port) {
+  public StatsD(final String host, final int port) {
     this(new InetSocketAddress(host, port), new DatagramSocketFactory());
   }
 
@@ -60,7 +60,7 @@ public class StatsD implements Closeable {
    * @param address       the address of the Carbon server
    * @param socketFactory the socket factory
    */
-  StatsD(final InetSocketAddress address, final DatagramSocketFactory socketFactory) {
+  public StatsD(final InetSocketAddress address, final DatagramSocketFactory socketFactory) {
     this.address = address;
     this.socketFactory = socketFactory;
   }
@@ -93,7 +93,7 @@ public class StatsD implements Closeable {
    */
   public void send(final String name, final String value) {
     try {
-      String formatted = String.format("%s:%s|g", sanitize(name), sanitize(value));
+      String formatted = formatPacketContent(sanitize(name), sanitize(value));
       byte[] bytes = formatted.getBytes(UTF_8);
       socket.send(socketFactory.createPacket(bytes, bytes.length, address));
       failures = 0;
@@ -106,6 +106,16 @@ public class StatsD implements Closeable {
         LOG.debug("unable to send packet to statsd at '{}:{}'", address.getHostName(), address.getPort());
       }
     }
+  }
+
+  /**
+   *
+   * @param  name  the name of the metric
+   * @param  value the value of the metric
+   * @return formatted data packet content
+   */
+  public String formatPacketContent(String name, String value) {
+    return String.format("%s:%s|g", name, value);
   }
 
   /**
